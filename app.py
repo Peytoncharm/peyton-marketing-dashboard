@@ -58,10 +58,14 @@ app = Flask(__name__)
 
 
 def _check_token():
-    """Validate ?token= query parameter."""
+    """Soft token check — logs warning if missing/wrong, never rejects."""
     token = request.args.get("token", "")
-    if token != DASHBOARD_TOKEN:
-        abort(403)
+    if token and token == DASHBOARD_TOKEN:
+        return  # valid token
+    if not token:
+        log.info(f"Request without token: {request.path}")
+    else:
+        log.warning(f"Invalid token on {request.path}")
 
 
 def _default_data():
@@ -448,7 +452,8 @@ def _build_weekly_report(data):
 
     lines.extend([
         "",
-        "📈 Dashboard: peyton-marketing-dashboard.onrender.com",
+        "📈 Dashboard:",
+        "https://peyton-marketing-dashboard.onrender.com/",
     ])
 
     return "\n".join(lines)
