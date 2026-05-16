@@ -216,9 +216,56 @@ def fetch_ga4_data(property_id):
 
 
 def fetch_zoho_bookings():
-    """Fetch bookings from Zoho CRM. Wired up in Step 4."""
-    # TODO: implement Zoho fetch
-    return {"Facebook": 0, "Instagram": 0, "TikTok": 0, "Web": 0, "Other": 0}
+    """Fetch Koh_Chang_Orders created in last 7 days, grouped by Chanel_of_booking."""
+    import requests as rq
+
+    if not TH_ZOHO_REFRESH_TOKEN:
+        log.warning("Zoho credentials not set, skipping")
+        return {"Facebook": 0, "Instagram": 0, "TikTok": 0, "Web": 0, "Other": 0}
+
+    # Get access token
+    token_resp = rq.post("https://accounts.zoho.eu/oauth/v2/token", params={
+        "refresh_token": TH_ZOHO_REFRESH_TOKEN,
+        "client_id": TH_ZOHO_CLIENT_ID,
+        "client_secret": TH_ZOHO_CLIENT_SECRET,
+        "grant_type": "refresh_token",
+    }, timeout=10)
+    access_token = token_resp.json().get("access_token", "")
+    if not access_token:
+        log.error(f"Zoho token error: {token_resp.text}")
+        return {"Facebook": 0, "Instagram": 0, "TikTok": 0, "Web": 0, "Other": 0}
+
+    # Search for orders created in last 7 days
+    seven_days_ago = (datetime.now(ICT) - timedelta(days=7)).strftime("%Y-%m-%d")
+    criteria = f"(Created_Time:greater_equal:{seven_days_ago})"
+    headers = {"Authorization": f"Zoho-oauthtoken {access_token}"}
+    resp = rq.get(
+        "https://www.zohoapis.eu/crm/v2/Koh_Chang_Orders/search",
+        headers=headers,
+        params={"criteria": criteria, "fields": "Chanel_of_booking", "per_page": 200},
+        timeout=15,
+    )
+
+    result = {"Facebook": 0, "Instagram": 0, "TikTok": 0, "Web": 0, "Other": 0}
+    if resp.status_code == 204:
+        log.info("Zoho: no orders in last 7 days")
+        return result
+    if resp.status_code != 200:
+        log.error(f"Zoho search error {resp.status_code}: {resp.text}")
+        return result
+
+    records = resp.json().get("data", [])
+    for rec in records:
+        channel = (rec.get("Chanel_of_booking") or "Other").strip()
+        if channel == "Foot Path":
+            continue  # skip test bookings
+        if channel in result:
+            result[channel] += 1
+        else:
+            result["Other"] += 1
+
+    log.info(f"Zoho bookings (7d): {result}")
+    return result
 
 
 def fetch_social_metrics():
