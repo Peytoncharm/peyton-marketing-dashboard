@@ -1,0 +1,11 @@
+{
+  "last_refresh": null,
+  "week_label": "Week of 12 May \u2013 18 May 2026",
+  "bu1": {"active_users": 0, "sessions": 0, "page_views": 0, "top_page": "\u2014", "top_page_views": 0, "bookings": 0, "traffic": {}},
+  "bu2": {"active_users": 0, "sessions": 0, "page_views": 0, "top_page": "\u2014", "top_page_views": 0, "bookings": 0, "traffic": {}},
+  "bu3": {"active_users": 0, "sessions": 0, "page_views": 0, "top_page": "\u2014", "top_page_views": 0, "enquiries": 0, "traffic": {}},
+  "social": {"views": 0, "engagement": 0, "followers": 0},
+  "bookings_by_channel": {"Facebook": 0, "Instagram": 0, "TikTok": 0, "Web": 0, "Other": 0},
+  "ai_citations": {"chatgpt": 0, "claude": 0, "perplexity": 0, "gemini": 0},
+  "pillar_views": {"route": 0, "trust": 0, "tip": 0, "place": 0}
+}

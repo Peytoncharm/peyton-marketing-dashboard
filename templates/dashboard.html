@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Peyton &amp; Charmed — Marketing Dashboard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Sarabun:wght@300;400;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Sarabun', -apple-system, sans-serif;
+    background: #f4f1ec;
+    color: #1a1a2e;
+    padding: 32px;
+    min-height: 100vh;
+  }
+
+  .container { max-width: 1400px; margin: 0 auto; }
+
+  /* === HEADER === */
+  .header {
+    background: linear-gradient(135deg, #1F3A5F 0%, #2E4057 100%);
+    border-radius: 20px;
+    padding: 28px 36px;
+    color: white;
+    margin-bottom: 24px;
+    box-shadow: 0 6px 28px rgba(31, 58, 95, 0.15);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .header-left h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    margin-bottom: 4px;
+    letter-spacing: -0.3px;
+  }
+  .header-left p { font-size: 13px; color: rgba(255,255,255,0.7); }
+  .header-right { text-align: right; }
+  .live-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(34, 197, 94, 0.2);
+    border: 1px solid rgba(34, 197, 94, 0.4);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #86efac;
+    margin-bottom: 6px;
+  }
+  .live-dot {
+    width: 8px; height: 8px;
+    background: #22c55e;
+    border-radius: 50%;
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.3); }
+  }
+  .date-tag { font-size: 12px; color: rgba(255,255,255,0.55); }
+
+  /* === DATA NOTICE === */
+  .notice {
+    background: #fef9e7;
+    border: 1px solid #fde68a;
+    border-left: 4px solid #d97706;
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin-bottom: 24px;
+    font-size: 13px;
+    color: #78350f;
+    line-height: 1.6;
+  }
+  .notice strong { color: #92400e; }
+
+  /* === SECTION LABEL === */
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #6b7280;
+    margin: 28px 0 14px 4px;
+  }
+
+  /* === BU CARDS ROW === */
+  .bu-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+    margin-bottom: 8px;
+  }
+
+  .bu-card {
+    background: white;
+    border-radius: 16px;
+    padding: 22px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+    border: 1px solid #ede9e1;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .bu-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+  }
+
+  .bu-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #f0ede8;
+  }
+  .bu-emoji { font-size: 22px; }
+  .bu-name {
+    font-weight: 700;
+    font-size: 15px;
+    color: #1a1a2e;
+  }
+  .bu-url {
+    font-size: 11px;
+    color: #9aa5b4;
+    margin-top: 1px;
+  }
+
+  .metric-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .metric {
+    background: #faf8f3;
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .metric-label {
+    font-size: 10px;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 4px;
+  }
+  .metric-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 24px;
+    font-weight: 700;
+    color: #1F3A5F;
+    line-height: 1;
+  }
+  .metric-sub {
+    font-size: 11px;
+    color: #9aa5b4;
+    margin-top: 3px;
+  }
+
+  .bu-status {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid #f0ede8;
+    font-size: 12px;
+    color: #6b7280;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .status-tag {
+    background: #dcfce7;
+    color: #166534;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .status-tag.pending {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  /* === CHARTS ROW === */
+  .charts-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 18px;
+    margin-bottom: 24px;
+  }
+
+  .chart-card {
+    background: white;
+    border-radius: 16px;
+    padding: 22px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+    border: 1px solid #ede9e1;
+  }
+
+  .chart-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin-bottom: 4px;
+  }
+  .chart-sub {
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 18px;
+  }
+
+  /* === TRAFFIC SOURCE BARS === */
+  .traffic-bars { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
+  .traffic-row { display: flex; align-items: center; gap: 12px; }
+  .traffic-label {
+    font-size: 12px;
+    width: 110px;
+    color: #374151;
+    font-weight: 500;
+  }
+  .traffic-bar-bg {
+    flex: 1;
+    height: 24px;
+    background: #f3f0e8;
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+  }
+  .traffic-bar-fill {
+    height: 100%;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 10px;
+    color: white;
+    font-size: 11px;
+    font-weight: 600;
+    min-width: 30px;
+  }
+  .traffic-bar-fill.google { background: linear-gradient(90deg, #4285f4, #5a95f5); }
+  .traffic-bar-fill.facebook { background: linear-gradient(90deg, #1877f2, #4a92f5); }
+  .traffic-bar-fill.instagram { background: linear-gradient(90deg, #e1306c, #f56040); }
+  .traffic-bar-fill.tiktok { background: linear-gradient(90deg, #000, #25f4ee); }
+  .traffic-bar-fill.ai { background: linear-gradient(90deg, #8b5cf6, #c084fc); }
+  .traffic-bar-fill.direct { background: linear-gradient(90deg, #6b7280, #9ca3af); }
+
+  /* === PILLAR ROWS === */
+  .pillar-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 8px;
+  }
+  .pillar-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 14px;
+    background: #faf8f3;
+    border-radius: 10px;
+    border-left: 4px solid;
+  }
+  .pillar-row.route { border-color: #4285f4; }
+  .pillar-row.trust { border-color: #22c55e; }
+  .pillar-row.tip { border-color: #f59e0b; }
+  .pillar-row.place { border-color: #ec4899; }
+  .pillar-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+  }
+  .pillar-num {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: #1F3A5F;
+  }
+
+  /* === BOOKINGS ROW === */
+  .bookings-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    margin-bottom: 24px;
+  }
+
+  .booking-stat {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 14px;
+    margin-top: 14px;
+  }
+  .booking-stat-box {
+    text-align: center;
+    padding: 14px 8px;
+    background: #faf8f3;
+    border-radius: 10px;
+  }
+  .booking-stat-num {
+    font-family: 'Playfair Display', serif;
+    font-size: 24px;
+    font-weight: 700;
+    color: #1F3A5F;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .booking-stat-label {
+    font-size: 10px;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+  }
+
+  /* === AI CITATIONS === */
+  .ai-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-top: 8px;
+  }
+  .ai-box {
+    text-align: center;
+    padding: 16px 10px;
+    background: #faf8f3;
+    border-radius: 10px;
+    border: 1px solid #ede9e1;
+  }
+  .ai-name {
+    font-size: 11px;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+  .ai-count {
+    font-family: 'Playfair Display', serif;
+    font-size: 24px;
+    font-weight: 700;
+    color: #1F3A5F;
+    line-height: 1;
+  }
+  .ai-status {
+    font-size: 10px;
+    color: #9aa5b4;
+    margin-top: 4px;
+  }
+
+  /* === FOOTER === */
+  .footer {
+    background: white;
+    border-radius: 16px;
+    padding: 18px 24px;
+    margin-top: 24px;
+    border: 1px solid #ede9e1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: #6b7280;
+  }
+  .footer .refresh {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #1F3A5F;
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-left">
+      <h1>Peyton &amp; Charmed — Marketing Dashboard</h1>
+      <p>Live view across all 3 business units · Updates every 6 hours</p>
+    </div>
+    <div class="header-right">
+      <div class="live-pill"><span class="live-dot"></span> Live</div>
+      <div class="date-tag">{{ d.week_label }}</div>
+    </div>
+  </div>
+
+  <!-- DATA NOTICE -->
+  {% if not d.last_refresh %}
+  <div class="notice">
+    <strong>Pre-launch state.</strong> Dashboard structure ready. Real numbers begin appearing once sites go live and content publishing starts. Week 1–2 traffic will be small; numbers grow as Google &amp; AI engines index our content.
+  </div>
+  {% endif %}
+
+  <!-- SECTION 1: BU OVERVIEW -->
+  <div class="section-label">Business Units — Last 7 days</div>
+  <div class="bu-row">
+
+    <!-- BU1 -->
+    <div class="bu-card">
+      <div class="bu-header">
+        <div class="bu-emoji">🚐</div>
+        <div>
+          <div class="bu-name">BU1 — Transfers</div>
+          <div class="bu-url">thailandairporttransfer.com</div>
+        </div>
+      </div>
+      <div class="metric-grid">
+        <div class="metric">
+          <div class="metric-label">Active Users</div>
+          <div class="metric-value">{{ d.bu1.active_users | default(0) }}</div>
+          <div class="metric-sub">{{ 'From GA4' if d.bu1.active_users else 'Awaiting data' }}</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Sessions</div>
+          <div class="metric-value">{{ d.bu1.sessions | default(0) }}</div>
+          <div class="metric-sub">{{ 'From GA4' if d.bu1.sessions else 'GA4 ready' }}</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Bookings</div>
+          <div class="metric-value">{{ d.bu1.bookings | default(0) }}</div>
+          <div class="metric-sub">From Zoho CRM</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Top Page</div>
+          <div class="metric-value" style="font-size:14px; padding-top:6px;">{{ d.bu1.top_page | default('—') }}</div>
+          <div class="metric-sub">{{ (d.bu1.top_page_views | string) + ' views' if d.bu1.top_page_views else 'No data yet' }}</div>
+        </div>
+      </div>
+      <div class="bu-status">
+        <span>AI Search Discoverable</span>
+        <span class="status-tag">✓ Live</span>
+      </div>
+    </div>
+
+    <!-- BU2 -->
+    <div class="bu-card">
+      <div class="bu-header">
+        <div class="bu-emoji">🏝️</div>
+        <div>
+          <div class="bu-name">BU2 — Tours</div>
+          <div class="bu-url">kohchangthailandtours.com</div>
+        </div>
+      </div>
+      <div class="metric-grid">
+        <div class="metric">
+          <div class="metric-label">Active Users</div>
+          <div class="metric-value">{{ d.bu2.active_users | default(0) }}</div>
+          <div class="metric-sub">{{ 'From GA4' if d.bu2.active_users else 'Awaiting data' }}</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Sessions</div>
+          <div class="metric-value">{{ d.bu2.sessions | default(0) }}</div>
+          <div class="metric-sub">{{ 'From GA4' if d.bu2.sessions else 'GA4 ready' }}</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Bookings</div>
+          <div class="metric-value">{{ d.bu2.bookings | default(0) }}</div>
+          <div class="metric-sub">From Zoho CRM</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Top Page</div>
+          <div class="metric-value" style="font-size:14px; padding-top:6px;">{{ d.bu2.top_page | default('—') }}</div>
+          <div class="metric-sub">{{ (d.bu2.top_page_views | string) + ' views' if d.bu2.top_page_views else 'No data yet' }}</div>
+        </div>
+      </div>
+      <div class="bu-status">
+        <span>Awaiting Dev Fix</span>
+        <span class="status-tag pending">⏳ Dev</span>
+      </div>
+    </div>
+
+    <!-- BU3 -->
+    <div class="bu-card">
+      <div class="bu-header">
+        <div class="bu-emoji">🎓</div>
+        <div>
+          <div class="bu-name">BU3 — UK Students</div>
+          <div class="bu-url">peytonandcharmedaccomm.co.uk</div>
+        </div>
+      </div>
+      <div class="metric-grid">
+        <div class="metric">
+          <div class="metric-label">Active Users</div>
+          <div class="metric-value">{{ d.bu3.active_users | default(0) }}</div>
+          <div class="metric-sub">{{ 'From GA4' if d.bu3.active_users else 'Awaiting data' }}</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Sessions</div>
+          <div class="metric-value">{{ d.bu3.sessions | default(0) }}</div>
+          <div class="metric-sub">{{ 'From GA4' if d.bu3.sessions else 'GA4 ready' }}</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Enquiries</div>
+          <div class="metric-value">{{ d.bu3.enquiries | default(0) }}</div>
+          <div class="metric-sub">From LINE bot</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Top Page</div>
+          <div class="metric-value" style="font-size:14px; padding-top:6px;">{{ d.bu3.top_page | default('—') }}</div>
+          <div class="metric-sub">{{ (d.bu3.top_page_views | string) + ' views' if d.bu3.top_page_views else 'No data yet' }}</div>
+        </div>
+      </div>
+      <div class="bu-status">
+        <span>AI Search Foundation</span>
+        <span class="status-tag">✓ Live</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- SECTION 2: TRAFFIC SOURCES + PILLARS -->
+  <div class="section-label">Where Visitors Come From · Content Pillar Performance</div>
+  <div class="charts-row">
+
+    <div class="chart-card">
+      <div class="chart-title">Traffic Sources — All BUs Combined</div>
+      <div class="chart-sub">Updates from GA4 every 6 hours</div>
+      {% set t = d.get('combined_traffic', {}) %}
+      {% set t_total = t.values() | sum if t else 1 %}
+      {% set sources = [
+        ('🔍 Google Search', 'google', t.get('Organic Search', 0)),
+        ('📘 Facebook', 'facebook', t.get('Organic Social', 0)),
+        ('📷 Instagram', 'instagram', 0),
+        ('🎵 TikTok', 'tiktok', 0),
+        ('🤖 AI Search', 'ai', t.get('AI Search', 0)),
+        ('🌐 Direct', 'direct', t.get('Direct', 0))
+      ] %}
+      <div class="traffic-bars">
+        {% for label, css_class, count in sources %}
+        {% set pct = ((count / t_total * 100) | int) if t_total > 0 and count > 0 else 8 %}
+        <div class="traffic-row">
+          <div class="traffic-label">{{ label }}</div>
+          <div class="traffic-bar-bg"><div class="traffic-bar-fill {{ css_class }}" style="width: {{ pct if count > 0 else 8 }}%;">{{ count }}</div></div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title">Content Pillar Performance</div>
+      <div class="chart-sub">Which content type drives traffic</div>
+      <div class="pillar-stack">
+        <div class="pillar-row route">
+          <span class="pillar-name">🛣️ Route</span>
+          <span class="pillar-num">{{ d.pillar_views.route | default(0) }}</span>
+        </div>
+        <div class="pillar-row trust">
+          <span class="pillar-name">🤝 Trust</span>
+          <span class="pillar-num">{{ d.pillar_views.trust | default(0) }}</span>
+        </div>
+        <div class="pillar-row tip">
+          <span class="pillar-name">💡 Tip</span>
+          <span class="pillar-num">{{ d.pillar_views.tip | default(0) }}</span>
+        </div>
+        <div class="pillar-row place">
+          <span class="pillar-name">📍 Place</span>
+          <span class="pillar-num">{{ d.pillar_views.place | default(0) }}</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- SECTION 3: SOCIAL + BOOKINGS -->
+  <div class="section-label">Social Reach · Bookings From Social</div>
+  <div class="bookings-row">
+
+    <div class="chart-card">
+      <div class="chart-title">Social Media Reach — Last 7 days</div>
+      <div class="chart-sub">Facebook + Instagram + TikTok combined</div>
+      <div class="booking-stat">
+        <div class="booking-stat-box">
+          <div class="booking-stat-num">{{ d.social.views | default(0) }}</div>
+          <div class="booking-stat-label">Views</div>
+        </div>
+        <div class="booking-stat-box">
+          <div class="booking-stat-num">{{ d.social.engagement | default(0) }}</div>
+          <div class="booking-stat-label">Engagement</div>
+        </div>
+        <div class="booking-stat-box">
+          <div class="booking-stat-num">{{ d.social.followers | default(0) }}</div>
+          <div class="booking-stat-label">Followers</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title">Bookings from Social Traffic</div>
+      <div class="chart-sub">Conversion path: post → website → booking (Zoho CRM)</div>
+      <div class="booking-stat">
+        <div class="booking-stat-box">
+          <div class="booking-stat-num">{{ d.bookings_by_channel.Facebook | default(0) }}</div>
+          <div class="booking-stat-label">From Facebook</div>
+        </div>
+        <div class="booking-stat-box">
+          <div class="booking-stat-num">{{ d.bookings_by_channel.Instagram | default(0) }}</div>
+          <div class="booking-stat-label">From Instagram</div>
+        </div>
+        <div class="booking-stat-box">
+          <div class="booking-stat-num">{{ d.bookings_by_channel.TikTok | default(0) }}</div>
+          <div class="booking-stat-label">From TikTok</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- SECTION 4: AI CITATIONS -->
+  <div class="section-label">AI Search Visibility — Are We Cited Yet?</div>
+  <div class="chart-card">
+    <div class="chart-title">AI Engine Citations — Mentions of Peyton &amp; Charmed</div>
+    <div class="chart-sub">Manual check weekly · Expect first citations 2–4 weeks after launch</div>
+    <div class="ai-grid">
+      <div class="ai-box">
+        <div class="ai-name">ChatGPT</div>
+        <div class="ai-count">{{ d.ai_citations.chatgpt | default(0) }}</div>
+        <div class="ai-status">{{ 'Cited!' if d.ai_citations.chatgpt else 'Crawler indexing' }}</div>
+      </div>
+      <div class="ai-box">
+        <div class="ai-name">Claude</div>
+        <div class="ai-count">{{ d.ai_citations.claude | default(0) }}</div>
+        <div class="ai-status">{{ 'Cited!' if d.ai_citations.claude else 'Crawler indexing' }}</div>
+      </div>
+      <div class="ai-box">
+        <div class="ai-name">Perplexity</div>
+        <div class="ai-count">{{ d.ai_citations.perplexity | default(0) }}</div>
+        <div class="ai-status">{{ 'Cited!' if d.ai_citations.perplexity else 'Crawler indexing' }}</div>
+      </div>
+      <div class="ai-box">
+        <div class="ai-name">Gemini</div>
+        <div class="ai-count">{{ d.ai_citations.gemini | default(0) }}</div>
+        <div class="ai-status">{{ 'Cited!' if d.ai_citations.gemini else 'Crawler indexing' }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div>
+      Data sources: GA4 (3 properties) · Meta Business Suite · TikTok Analytics · Zoho CRM
+      {% if d.last_refresh %} · Last refresh: {{ d.last_refresh[:16] }}{% endif %}
+    </div>
+    <div class="refresh">
+      ↻ Auto-refresh every 6 hours
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
