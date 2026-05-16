@@ -31,7 +31,7 @@ PA_LINE_GROUP_ID = os.environ.get("PA_LINE_GROUP_ID", "")
 # GA4 property IDs
 GA4_PROPERTY_BU1 = os.environ.get("GA4_PROPERTY_BU1", "538028937")
 GA4_PROPERTY_BU2 = os.environ.get("GA4_PROPERTY_BU2", "537958860")
-GA4_PROPERTY_BU3 = os.environ.get("GA4_PROPERTY_BU3", "")  # TBD
+GA4_PROPERTY_BU3 = os.environ.get("GA4_PROPERTY_BU3", "301161975")
 
 # Zoho credentials
 TH_ZOHO_REFRESH_TOKEN = os.environ.get("TH_ZOHO_REFRESH_TOKEN", "")
@@ -366,13 +366,119 @@ def api_refresh():
                      "time": datetime.now(ICT).isoformat()})
 
 
+def _send_line_push(token, group_id, message):
+    """Push a text message to a LINE group."""
+    import requests as rq
+    resp = rq.post(
+        "https://api.line.me/v2/bot/message/push",
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "to": group_id,
+            "messages": [{"type": "text", "text": message}],
+        },
+        timeout=10,
+    )
+    log.info(f"LINE push status={resp.status_code}")
+    if resp.status_code != 200:
+        log.error(f"LINE push error: {resp.text}")
+    return resp.status_code == 200
+
+
+def _build_weekly_report(data):
+    """Build Thai LINE message from cached dashboard data."""
+    bu1 = data.get("bu1", {})
+    bu2 = data.get("bu2", {})
+    bu3 = data.get("bu3", {})
+    bk = data.get("bookings_by_channel", {})
+    ai = data.get("ai_citations", {})
+    social = data.get("social", {})
+
+    total_users = bu1.get("active_users", 0) + bu2.get("active_users", 0) + bu3.get("active_users", 0)
+    total_sessions = bu1.get("sessions", 0) + bu2.get("sessions", 0) + bu3.get("sessions", 0)
+    total_bookings = sum(bk.values())
+    total_ai = ai.get("chatgpt", 0) + ai.get("claude", 0) + ai.get("perplexity", 0) + ai.get("gemini", 0)
+
+    lines = [
+        f"📊 Weekly Marketing Report",
+        f"{data.get('week_label', '')}",
+        "",
+        f"👥 ผู้เข้าชมทั้งหมด: {total_users:,} users / {total_sessions:,} sessions",
+        "",
+        f"🚐 BU1 Transfers",
+        f"   Users: {bu1.get('active_users', 0):,}  |  Sessions: {bu1.get('sessions', 0):,}",
+        f"   Top page: {bu1.get('top_page', '—')}",
+        "",
+        f"🏝️ BU2 Tours",
+        f"   Users: {bu2.get('active_users', 0):,}  |  Sessions: {bu2.get('sessions', 0):,}",
+        f"   Top page: {bu2.get('top_page', '—')}",
+        "",
+        f"🎓 BU3 UK Students",
+        f"   Users: {bu3.get('active_users', 0):,}  |  Sessions: {bu3.get('sessions', 0):,}",
+        f"   Top page: {bu3.get('top_page', '—')}",
+        "",
+        f"📦 Bookings (7 วัน): {total_bookings}",
+    ]
+    if total_bookings > 0:
+        for ch, cnt in bk.items():
+            if cnt > 0:
+                lines.append(f"   {ch}: {cnt}")
+
+    # Social — stubbed for now
+    if social.get("views", 0) > 0:
+        lines.extend([
+            "",
+            f"📱 Social Reach: {social['views']:,} views / {social['engagement']:,} engagement",
+        ])
+
+    lines.extend([
+        "",
+        f"🤖 AI Citations: {total_ai}",
+    ])
+    if total_ai > 0:
+        for name, key in [("ChatGPT", "chatgpt"), ("Claude", "claude"),
+                          ("Perplexity", "perplexity"), ("Gemini", "gemini")]:
+            cnt = ai.get(key, 0)
+            if cnt > 0:
+                lines.append(f"   {name}: {cnt}")
+    else:
+        lines.append("   Crawler กำลัง index — รอ 2-4 สัปดาห์")
+
+    lines.extend([
+        "",
+        "📈 Dashboard: peyton-marketing-dashboard.onrender.com",
+    ])
+
+    return "\n".join(lines)
+
+
 @app.route("/cron/weekly-line-report")
 def weekly_line_report():
     """Triggered by cron-job.org Sunday 20:00 ICT. Sends summary to LINE."""
     _check_token()
-    # TODO: implement in Step 7
-    log.info("Weekly LINE report triggered (not yet implemented)")
-    return jsonify({"status": "not_implemented_yet"})
+
+    # Refresh data first, then build report
+    data = do_full_refresh()
+    message = _build_weekly_report(data)
+    log.info(f"Weekly report message:\n{message}")
+
+    if not PA_LINE_TOKEN or not PA_LINE_GROUP_ID:
+        log.warning("PA_LINE_TOKEN or PA_LINE_GROUP_ID not set, skipping LINE push")
+        return jsonify({"status": "no_line_credentials", "message": message})
+
+    success = _send_line_push(PA_LINE_TOKEN, PA_LINE_GROUP_ID, message)
+    return jsonify({"status": "sent" if success else "send_failed", "message": message})
+
+
+@app.route("/test/weekly-line-report")
+def test_weekly_line_report():
+    """Dry run — builds the report message but does NOT send to LINE."""
+    _check_token()
+    data = _load_cache()
+    message = _build_weekly_report(data)
+    return f"<pre>{message}</pre>"
 
 
 @app.route("/health")
