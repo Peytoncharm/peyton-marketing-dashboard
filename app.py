@@ -13,6 +13,12 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 from flask import Flask, jsonify, request, render_template, abort
+from google.oauth2.service_account import Credentials as SACredentials
+from google.analytics.data_v1beta import BetaAnalyticsDataClient
+from google.analytics.data_v1beta.types import (
+    RunReportRequest, DateRange, Dimension, Metric, OrderBy, FilterExpression,
+    Filter,
+)
 
 # ---------------------------------------------------------------------------
 # Config
@@ -32,8 +38,9 @@ TH_ZOHO_REFRESH_TOKEN = os.environ.get("TH_ZOHO_REFRESH_TOKEN", "")
 TH_ZOHO_CLIENT_ID = os.environ.get("TH_ZOHO_CLIENT_ID", "")
 TH_ZOHO_CLIENT_SECRET = os.environ.get("TH_ZOHO_CLIENT_SECRET", "")
 
-# Google service account JSON (from env var)
-GOOGLE_SHEETS_CREDENTIALS = os.environ.get("GOOGLE_SHEETS_CREDENTIALS", "")
+# Google service account JSON (supports both env var names)
+GOOGLE_SA_JSON = (os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON", "")
+                  or os.environ.get("GOOGLE_SHEETS_CREDENTIALS", ""))
 
 # AI citations sheet
 AI_CITATIONS_SHEET_ID = os.environ.get("AI_CITATIONS_SHEET_ID", "")
@@ -127,13 +134,84 @@ def _save_cache(data):
 # Data fetch functions (stubbed — wired up in later steps)
 # ---------------------------------------------------------------------------
 
+def _ga4_client():
+    """Build an authenticated GA4 Data API client."""
+    if not GOOGLE_SA_JSON:
+        raise RuntimeError("No Google service account JSON configured")
+    sa_info = json.loads(GOOGLE_SA_JSON)
+    creds = SACredentials.from_service_account_info(sa_info, scopes=[
+        "https://www.googleapis.com/auth/analytics.readonly",
+    ])
+    log.info(f"GA4 service account: {sa_info.get('client_email', '?')}")
+    return BetaAnalyticsDataClient(credentials=creds)
+
+
 def fetch_ga4_data(property_id):
-    """Fetch GA4 metrics for a single property. Wired up in Step 2."""
-    # TODO: implement GA4 fetch
+    """Fetch GA4 metrics for a single property (last 7 days)."""
+    if not property_id:
+        return {"active_users": 0, "sessions": 0, "page_views": 0,
+                "top_page": "—", "top_page_views": 0, "traffic": {}}
+
+    client = _ga4_client()
+    prop = f"properties/{property_id}"
+
+    # --- Report 1: summary metrics ---
+    summary = client.run_report(RunReportRequest(
+        property=prop,
+        date_ranges=[DateRange(start_date="7daysAgo", end_date="today")],
+        metrics=[
+            Metric(name="activeUsers"),
+            Metric(name="sessions"),
+            Metric(name="screenPageViews"),
+        ],
+    ))
+    active_users = sessions = page_views = 0
+    if summary.rows:
+        r = summary.rows[0]
+        active_users = int(r.metric_values[0].value)
+        sessions = int(r.metric_values[1].value)
+        page_views = int(r.metric_values[2].value)
+    log.info(f"GA4 {property_id}: users={active_users} sessions={sessions} views={page_views}")
+
+    # --- Report 2: top page ---
+    top_page_report = client.run_report(RunReportRequest(
+        property=prop,
+        date_ranges=[DateRange(start_date="7daysAgo", end_date="today")],
+        dimensions=[Dimension(name="pagePath")],
+        metrics=[Metric(name="screenPageViews")],
+        order_bys=[OrderBy(metric=OrderBy.MetricOrderBy(metric_name="screenPageViews"),
+                           desc=True)],
+        limit=1,
+    ))
+    top_page = "—"
+    top_page_views = 0
+    if top_page_report.rows:
+        top_page = top_page_report.rows[0].dimension_values[0].value
+        top_page_views = int(top_page_report.rows[0].metric_values[0].value)
+
+    # --- Report 3: traffic sources ---
+    traffic_report = client.run_report(RunReportRequest(
+        property=prop,
+        date_ranges=[DateRange(start_date="7daysAgo", end_date="today")],
+        dimensions=[Dimension(name="sessionDefaultChannelGroup")],
+        metrics=[Metric(name="sessions")],
+        order_bys=[OrderBy(metric=OrderBy.MetricOrderBy(metric_name="sessions"),
+                           desc=True)],
+        limit=10,
+    ))
+    traffic = {}
+    for row in traffic_report.rows:
+        channel = row.dimension_values[0].value
+        count = int(row.metric_values[0].value)
+        traffic[channel] = count
+
     return {
-        "active_users": 0, "sessions": 0, "page_views": 0,
-        "top_page": "—", "top_page_views": 0,
-        "traffic": {}
+        "active_users": active_users,
+        "sessions": sessions,
+        "page_views": page_views,
+        "top_page": top_page,
+        "top_page_views": top_page_views,
+        "traffic": traffic,
     }
 
 
