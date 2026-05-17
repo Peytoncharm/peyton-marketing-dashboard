@@ -244,14 +244,15 @@ def fetch_zoho_bookings():
         log.error(f"Zoho token error: {token_resp.text}")
         return {"Facebook": 0, "Instagram": 0, "TikTok": 0, "Web": 0, "Other": 0}
 
-    # Search for orders created in last 7 days
-    seven_days_ago = (datetime.now(ICT) - timedelta(days=7)).strftime("%Y-%m-%d")
-    criteria = f"(Created_Time:greater_equal:{seven_days_ago})"
-    headers = {"Authorization": f"Zoho-oauthtoken {access_token}"}
-    resp = rq.get(
-        "https://www.zohoapis.eu/crm/v2/Koh_Chang_Orders/search",
+    # Query orders created in last 7 days via COQL
+    seven_days_ago = (datetime.now(ICT) - timedelta(days=7)).strftime("%Y-%m-%dT00:00:00+07:00")
+    query = f"SELECT Chanel_of_booking FROM Koh_Chang_Orders WHERE Created_Time >= '{seven_days_ago}' LIMIT 200"
+    headers = {"Authorization": f"Zoho-oauthtoken {access_token}",
+               "Content-Type": "application/json"}
+    resp = rq.post(
+        "https://www.zohoapis.eu/crm/v2/coql",
         headers=headers,
-        params={"criteria": criteria, "fields": "Chanel_of_booking", "per_page": 200},
+        json={"select_query": query},
         timeout=15,
     )
 
@@ -260,7 +261,7 @@ def fetch_zoho_bookings():
         log.info("Zoho: no orders in last 7 days")
         return result
     if resp.status_code != 200:
-        log.error(f"Zoho search error {resp.status_code}: {resp.text}")
+        log.error(f"Zoho COQL error {resp.status_code}: {resp.text}")
         return result
 
     records = resp.json().get("data", [])
@@ -297,14 +298,15 @@ def fetch_uk_zoho_enquiries():
         log.error(f"UK Zoho token error: {token_resp.text}")
         return 0
 
-    # Search for leads created in last 7 days
-    seven_days_ago = (datetime.now(ICT) - timedelta(days=7)).strftime("%Y-%m-%d")
-    criteria = f"(Created_Time:greater_equal:{seven_days_ago})"
-    headers = {"Authorization": f"Zoho-oauthtoken {access_token}"}
-    resp = rq.get(
-        "https://www.zohoapis.eu/crm/v2/Leads/search",
+    # Query leads created in last 7 days via COQL
+    seven_days_ago = (datetime.now(ICT) - timedelta(days=7)).strftime("%Y-%m-%dT00:00:00+07:00")
+    query = f"SELECT id FROM Leads WHERE Created_Time >= '{seven_days_ago}' LIMIT 200"
+    headers = {"Authorization": f"Zoho-oauthtoken {access_token}",
+               "Content-Type": "application/json"}
+    resp = rq.post(
+        "https://www.zohoapis.eu/crm/v2/coql",
         headers=headers,
-        params={"criteria": criteria, "fields": "id", "per_page": 200},
+        json={"select_query": query},
         timeout=15,
     )
 
@@ -312,7 +314,7 @@ def fetch_uk_zoho_enquiries():
         log.info("UK Zoho: no leads in last 7 days")
         return 0
     if resp.status_code != 200:
-        log.error(f"UK Zoho search error {resp.status_code}: {resp.text}")
+        log.error(f"UK Zoho COQL error {resp.status_code}: {resp.text}")
         return 0
 
     count = len(resp.json().get("data", []))
