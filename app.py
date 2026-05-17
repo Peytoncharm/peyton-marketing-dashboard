@@ -33,10 +33,15 @@ GA4_PROPERTY_BU1 = os.environ.get("GA4_PROPERTY_BU1", "538028937")
 GA4_PROPERTY_BU2 = os.environ.get("GA4_PROPERTY_BU2", "537958860")
 GA4_PROPERTY_BU3 = os.environ.get("GA4_PROPERTY_BU3", "301161975")
 
-# Zoho credentials
+# Zoho credentials — Thailand (BU1 + BU2)
 TH_ZOHO_REFRESH_TOKEN = os.environ.get("TH_ZOHO_REFRESH_TOKEN", "")
 TH_ZOHO_CLIENT_ID = os.environ.get("TH_ZOHO_CLIENT_ID", "")
 TH_ZOHO_CLIENT_SECRET = os.environ.get("TH_ZOHO_CLIENT_SECRET", "")
+
+# Zoho credentials — UK (BU3)
+UK_ZOHO_REFRESH_TOKEN = os.environ.get("UK_ZOHO_REFRESH_TOKEN", "")
+UK_ZOHO_CLIENT_ID = os.environ.get("UK_ZOHO_CLIENT_ID", "")
+UK_ZOHO_CLIENT_SECRET = os.environ.get("UK_ZOHO_CLIENT_SECRET", "")
 
 # Google service account JSON (supports both env var names)
 GOOGLE_SA_JSON = (os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON", "")
@@ -272,6 +277,49 @@ def fetch_zoho_bookings():
     return result
 
 
+def fetch_uk_zoho_enquiries():
+    """Fetch Leads created in last 7 days from UK Zoho CRM (BU3)."""
+    import requests as rq
+
+    if not UK_ZOHO_REFRESH_TOKEN:
+        log.warning("UK Zoho credentials not set, skipping")
+        return 0
+
+    # Get access token
+    token_resp = rq.post("https://accounts.zoho.eu/oauth/v2/token", params={
+        "refresh_token": UK_ZOHO_REFRESH_TOKEN,
+        "client_id": UK_ZOHO_CLIENT_ID,
+        "client_secret": UK_ZOHO_CLIENT_SECRET,
+        "grant_type": "refresh_token",
+    }, timeout=10)
+    access_token = token_resp.json().get("access_token", "")
+    if not access_token:
+        log.error(f"UK Zoho token error: {token_resp.text}")
+        return 0
+
+    # Search for leads created in last 7 days
+    seven_days_ago = (datetime.now(ICT) - timedelta(days=7)).strftime("%Y-%m-%d")
+    criteria = f"(Created_Time:greater_equal:{seven_days_ago})"
+    headers = {"Authorization": f"Zoho-oauthtoken {access_token}"}
+    resp = rq.get(
+        "https://www.zohoapis.eu/crm/v2/Leads/search",
+        headers=headers,
+        params={"criteria": criteria, "fields": "id", "per_page": 200},
+        timeout=15,
+    )
+
+    if resp.status_code == 204:
+        log.info("UK Zoho: no leads in last 7 days")
+        return 0
+    if resp.status_code != 200:
+        log.error(f"UK Zoho search error {resp.status_code}: {resp.text}")
+        return 0
+
+    count = len(resp.json().get("data", []))
+    log.info(f"UK Zoho enquiries (7d): {count}")
+    return count
+
+
 def fetch_social_metrics():
     """Fetch social media reach. TODO: Meta integration."""
     # TODO: Meta integration
@@ -317,6 +365,11 @@ def do_full_refresh():
         data["bu2"]["bookings"] = total
     except Exception as e:
         log.error(f"Zoho bookings failed: {e}")
+
+    try:
+        data["bu3"]["enquiries"] = fetch_uk_zoho_enquiries()
+    except Exception as e:
+        log.error(f"UK Zoho enquiries failed: {e}")
 
     try:
         data["social"] = fetch_social_metrics()
