@@ -328,9 +328,35 @@ def fetch_social_metrics():
 
 
 def fetch_ai_citations():
-    """Fetch AI citation counts from Google Sheet."""
-    # TODO: implement Google Sheets fetch
-    return {"chatgpt": 0, "claude": 0, "perplexity": 0, "gemini": 0}
+    """Fetch AI citation counts from Google Sheet (last row = most recent week)."""
+    import gspread
+
+    if not AI_CITATIONS_SHEET_ID or not GOOGLE_SA_JSON:
+        log.warning("AI citations sheet ID or Google credentials not set, skipping")
+        return {"chatgpt": 0, "claude": 0, "perplexity": 0, "gemini": 0}
+
+    sa_info = json.loads(GOOGLE_SA_JSON)
+    creds = SACredentials.from_service_account_info(sa_info, scopes=[
+        "https://www.googleapis.com/auth/spreadsheets.readonly",
+    ])
+    gc = gspread.authorize(creds)
+    sh = gc.open_by_key(AI_CITATIONS_SHEET_ID)
+    ws = sh.sheet1
+
+    rows = ws.get_all_records()
+    if not rows:
+        log.info("AI citations sheet: no data rows")
+        return {"chatgpt": 0, "claude": 0, "perplexity": 0, "gemini": 0}
+
+    last = rows[-1]
+    result = {
+        "chatgpt": int(last.get("chatgpt", 0) or 0),
+        "claude": int(last.get("claude", 0) or 0),
+        "perplexity": int(last.get("perplexity", 0) or 0),
+        "gemini": int(last.get("gemini", 0) or 0),
+    }
+    log.info(f"AI citations (latest row): {result}")
+    return result
 
 
 def do_full_refresh():
